@@ -1,67 +1,86 @@
 'use strict';
 
-const { remote } = window.require('electron');
-const exec = remote.require('child_process').exec;
-
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
   const windowsPath = document.getElementById('windowsPath');
   const mountURI = document.getElementById('mountURI');
   const macPath = document.getElementById('macPath');
   const userName = document.getElementById('userName');
+  const openButton = document.getElementById('openButton');
+  const status = document.getElementById('status');
+  let conversionRequest = 0;
 
-  function pathEscape(str) {
-    return str.replace(/ /g, '\\ ').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+  function setStatus(message = '') {
+    status.textContent = message;
   }
-
-  function pathUnescape(str) {
-    return str.replace(/\\ /g, ' ').replace(/\\\(/g, '(').replace(/\\\)/g, ')');
-  }
-
-  function macPathInput() {
-    const volumesIndex = macPath.value.indexOf('/Volumes')
-    if (volumesIndex === -1) {
-      windowsPath.value = '';
-      mountURI.value = '';
-      return;
-    }
-    const mountPoint = macPath.value.split('/')[2];
-    exec(`mount | grep ${mountPoint} | awk '{print \$1}'`, (err, stdout, stderr) => {
-      mountURI.value = 'smb:' + decodeURIComponent(stdout).replace('@', ':');
-      windowsPath.value = decodeURIComponent(stdout).replace(/^.*@/, '//').replace(/\//g, '\\')
-        + '\\' + pathUnescape(macPath.value.split('/').slice(3).join('\\'));
-    });
-  }  
 
   function windowsPathInput() {
-    const server = windowsPath.value.split('\\')[2];
-    const topDir = windowsPath.value.split('\\')[3];
-    const otherPath = windowsPath.value.split('\\').slice(4).join('/');
-    const serverPrefix = userName.value ? userName.value + ':' : '';
-    mountURI.value = `smb://${serverPrefix}${server}/${topDir}`
-    macPath.value = `/Volumes/${topDir}/${pathEscape(otherPath)}`
+    const converted = window.PathConverter.windowsToMac(windowsPath.value, userName.value);
+    if (!converted) {
+      mountURI.value = '';
+      macPath.value = '';
+      setStatus(windowsPath.value ? 'Windowsパスの形式を確認してください。' : '');
+      return;
+    }
+    mountURI.value = converted.mountURI;
+    macPath.value = converted.macPath;
+    setStatus();
   }
 
-  document.addEventListener('drop', (e) => {
-    e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    macPath.value = pathEscape(file.path);
-    macPathInput();
-    return false;
-  });
-  
+  async function macPathInput() {
+    const request = ++conversionRequest;
+    if (!window.PathConverter.volumeMountPoint(macPath.value)) {
+      windowsPath.value = '';
+      mountURI.value = '';
+      setStatus(macPath.value ? '/Volumes 以下のパスを入力してください。' : '');
+      return;
+    }
 
-  macPath.addEventListener('input', macPathInput);
+    try {
+      const source = await window.pathConvertApi.getMountSource(macPath.value);
+      if (request !== conversionRequest) {
+        return;
+      }
+      const converted = window.PathConverter.macToWindows(macPath.value, source);
+      if (!converted) {
+        windowsPath.value = '';
+        mountURI.value = '';
+        setStatus('対応するSMBマウントを確認できませんでした。');
+        return;
+      }
+      windowsPath.value = converted.windowsPath;
+      mountURI.value = converted.mountURI;
+      setStatus();
+    } catch (error) {
+      setStatus(error.message);
+    }
+  }
+
+  document.addEventListener('dragover', (event) => event.preventDefault());
+  document.addEventListener('drop', (event) => {
+    event.preventDefault();
+    const [file] = event.dataTransfer.files;
+    if (!file) {
+      return;
+    }
+    macPath.value = window.pathConvertApi.getPathForFile(file);
+    macPathInput();
+  });
+
+  macPath.addEventListener('change', macPathInput);
   windowsPath.addEventListener('input', windowsPathInput);
   userName.addEventListener('input', windowsPathInput);
-
-  const openButton = document.getElementById('openButton');
-  openButton.addEventListener('click', () => {
-    exec(`open ${macPath.value}`)
+  openButton.addEventListener('click', async () => {
+    try {
+      await window.pathConvertApi.openPath(macPath.value);
+      setStatus();
+    } catch (error) {
+      setStatus(error.message);
+    }
   });
 
-  exec('whoami', (err, stdout, stderr) => {
-    userName.value = stdout;
-  });
-
+  try {
+    userName.value = await window.pathConvertApi.getUserName();
+  } catch (error) {
+    setStatus(error.message);
+  }
 });
-
