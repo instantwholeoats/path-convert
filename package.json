@@ -4,13 +4,16 @@
   "description": "Windowsの共有パスをMac用にコンバートする",
   "main": "main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "pack:osx": "build --mac --x64"
+    "start": "electron .",
+    "test": "node --test",
+    "pack:dir": "electron-builder --dir --mac",
+    "pack:osx": "electron-builder --mac dmg"
   },
   "author": "Kentaro Hayashi",
   "license": "MIT",
   "build": {
     "appId": "com.woodses.pathconvert",
+    "productName": "PATH Converter",
     "mac": {
       "target": "dmg"
     },
@@ -18,9 +21,12 @@
       "output": "out"
     }
   },
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "dependencies": {},
   "devDependencies": {
-    "electron": "^7.2.4",
-    "electron-builder": "^20.38.4"
+    "electron": "^44.0.0",
+    "electron-builder": "^26.15.3"
   }
 }

@@ -2,7 +2,9 @@
 <html>
   <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'">
     <link rel="stylesheet" href="./css/pure-min.css">
+    <script type="text/javascript" src="js/path-converter.js"></script>
     <script type="text/javascript" src="js/viewmain.js"></script>
     <title>PATHコンバータ</title>
   </head>
@@ -13,6 +15,7 @@
       <input class="pure-input-1" type="text" id="macPath" placeholder="/Volumes/MountPoint/path/to/file (Mac path)">
       <input class="pure-input-1" type="text" id="userName" placeholder="UserName">
       <button class="pure-button" type="button" id="openButton">open</button>
+      <p id="status" role="status" aria-live="polite"></p>
     </form>
   </body>
 </html>
