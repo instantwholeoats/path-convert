@@ -34,8 +34,8 @@ test('electron-builder download proxy routes HTTP requests and honors NO_PROXY',
       request.setTimeout(5000, () => request.destroy(new Error('request timeout')));
       request.on('error', reject);
     });
-    assert.equal(await get('http://electron-download.invalid/artifact.zip'), 'proxied');
-    assert.deepEqual(proxyRequests, ['http://electron-download.invalid/artifact.zip']);
+    assert.equal(await get('http://proxy-probe.invalid/health'), 'proxied');
+    assert.deepEqual(proxyRequests, ['http://proxy-probe.invalid/health']);
     assert.equal(await get(`http://127.0.0.1:${direct.address().port}/`), 'direct');
     assert.equal(proxyRequests.length, 1);
   } finally {
