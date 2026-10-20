@@ -31,5 +31,10 @@ npm test
 npm run pack:dir
 ```
 
+`@electron/get@3.1.0` がビルド時に使う `global-agent` は、脆弱な
+`roarr` / `sprintf-js` への依存を除いた 4.1.3 に固定しています。
+`npm test` はこのダウンローダーのプロキシ経由通信と `NO_PROXY` も検証します。
+上流が修正版へ更新されたら、この限定的な override を再評価してください。
+
 画面側ではNode.js APIを利用できないよう隔離し、ファイルを開く処理は
 `/Volumes` 以下のパスだけをElectronの安全なAPIへ渡します。
